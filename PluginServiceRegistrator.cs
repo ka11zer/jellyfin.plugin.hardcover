@@ -1,13 +1,12 @@
 using Jellyfin.Plugin.Hardcover.Api;
 using Jellyfin.Plugin.Hardcover.Providers;
-using MediaBrowser.Common.Plugins;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Providers;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Jellyfin.Plugin.Hardcover;
 
-public class PluginServiceRegistrator : IPluginServiceRegistrator
+public class PluginServiceRegistrator : MediaBrowser.Common.Plugins.IPluginServiceRegistrator
 {
     public void RegisterServices(IServiceCollection services)
     {
