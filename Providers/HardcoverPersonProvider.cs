@@ -14,13 +14,12 @@ namespace Jellyfin.Plugin.Hardcover.Providers;
 
 public class HardcoverPersonProvider : IRemoteMetadataProvider<Person, PersonLookupInfo>, IHasOrder
 {
+    private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(30) };
     private readonly IHardcoverApiService _api;
-    private readonly ILogger<HardcoverPersonProvider> _logger;
 
-    public HardcoverPersonProvider(IHardcoverApiService api, ILogger<HardcoverPersonProvider> logger)
+    public HardcoverPersonProvider(ILogger<HardcoverPersonProvider> logger)
     {
-        _api = api;
-        _logger = logger;
+        _api = new HardcoverApiService(_httpClient, logger);
     }
 
     public string Name => "Hardcover";
@@ -30,7 +29,6 @@ public class HardcoverPersonProvider : IRemoteMetadataProvider<Person, PersonLoo
     {
         var results = new List<RemoteSearchResult>();
         var authors = await _api.SearchAuthorsAsync(searchInfo.Name, cancellationToken);
-
         foreach (var author in authors)
         {
             var result = new RemoteSearchResult
@@ -47,15 +45,11 @@ public class HardcoverPersonProvider : IRemoteMetadataProvider<Person, PersonLoo
     public async Task<MetadataResult<Person>> GetMetadata(PersonLookupInfo info, CancellationToken cancellationToken)
     {
         var result = new MetadataResult<Person>();
-
-        // Try existing Hardcover ID
         var existingId = info.ProviderIds.GetOrDefault("Hardcover");
         AuthorDetails? author = null;
 
         if (!string.IsNullOrEmpty(existingId))
-        {
             author = await _api.GetAuthorByIdAsync(existingId, cancellationToken);
-        }
 
         if (author == null)
         {
@@ -65,19 +59,16 @@ public class HardcoverPersonProvider : IRemoteMetadataProvider<Person, PersonLoo
                 author = await _api.GetAuthorByIdAsync(best.Slug, cancellationToken);
         }
 
-        if (author == null)
-            return result;
+        if (author == null) return result;
 
         result.Item = new Person
         {
             Name = author.Name,
             Overview = string.IsNullOrWhiteSpace(author.Biography) ? null : author.Biography,
         };
-
         result.HasMetadata = true;
         result.Provider = Name;
         result.Item.ProviderIds["Hardcover"] = author.Slug;
-
         return result;
     }
 
