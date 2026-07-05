@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
@@ -14,12 +15,12 @@ namespace Jellyfin.Plugin.Hardcover.Providers;
 
 public class HardcoverPersonProvider : IRemoteMetadataProvider<Person, PersonLookupInfo>, IHasOrder
 {
-    private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(30) };
     private readonly IHardcoverApiService _api;
 
     public HardcoverPersonProvider(ILogger<HardcoverPersonProvider> logger)
     {
-        _api = new HardcoverApiService(_httpClient, logger);
+        var client = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+        _api = new HardcoverApiService(client, logger);
     }
 
     public string Name => "Hardcover";
@@ -45,7 +46,8 @@ public class HardcoverPersonProvider : IRemoteMetadataProvider<Person, PersonLoo
     public async Task<MetadataResult<Person>> GetMetadata(PersonLookupInfo info, CancellationToken cancellationToken)
     {
         var result = new MetadataResult<Person>();
-        var existingId = info.ProviderIds.GetOrDefault("Hardcover");
+        string? existingId = null;
+        info.ProviderIds.TryGetValue("Hardcover", out existingId);
         AuthorDetails? author = null;
 
         if (!string.IsNullOrEmpty(existingId))
