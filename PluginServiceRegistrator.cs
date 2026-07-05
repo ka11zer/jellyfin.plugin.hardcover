@@ -1,27 +1,29 @@
-using System;
 using Jellyfin.Plugin.Hardcover.Api;
-using MediaBrowser.Controller;
-using MediaBrowser.Controller.Plugins;
+using Jellyfin.Plugin.Hardcover.Providers;
+using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Providers;
+using MediaBrowser.Controller.Library;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Jellyfin.Plugin.Hardcover;
 
-/// <summary>
-/// Registers plugin services (a named <see cref="System.Net.Http.HttpClient"/> for talking
-/// to the Hardcover GraphQL API) with Jellyfin's dependency injection container.
-/// </summary>
-public class PluginServiceRegistrator : IPluginServiceRegistrator
+public class HardcoverPluginServiceRegistrator : IPluginServiceRegistrator
 {
-    /// <inheritdoc />
-    public void RegisterServices(IServiceCollection serviceCollection, IServerApplicationHost applicationHost)
+    public void RegisterServices(IServiceCollection services)
     {
-        serviceCollection.AddHttpClient(HardcoverApiClient.HttpClientName, client =>
+        // Register the API service with an HttpClient
+        services.AddHttpClient<IHardcoverApiService, HardcoverApiService>(client =>
         {
-            client.BaseAddress = new Uri(HardcoverApiClient.GraphQlEndpoint);
+            client.BaseAddress = new Uri("https://api.hardcover.app/v1/");
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("Jellyfin.Hardcover/1.0");
             client.Timeout = TimeSpan.FromSeconds(30);
-            client.DefaultRequestHeaders.UserAgent.ParseAdd("Jellyfin-Hardcover-Plugin/1.0 (+https://github.com/)");
         });
 
-        serviceCollection.AddSingleton<HardcoverApiClient>();
+        // Register metadata providers
+        services.AddSingleton<IMetadataProvider<Person>, HardcoverPersonProvider>();
+        services.AddSingleton<IMetadataProvider<Book>, HardcoverBookProvider>();
+
+        // Register remote image provider for books
+        services.AddSingleton<IRemoteImageProvider, HardcoverBookImageProvider>();
     }
 }
