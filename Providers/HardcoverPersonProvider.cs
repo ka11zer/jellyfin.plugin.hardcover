@@ -2,12 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.Hardcover.Api;
 using Jellyfin.Plugin.Hardcover.Api.Models;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Providers;
+using MediaBrowser.Model.Providers;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.Hardcover.Providers;
@@ -24,14 +26,16 @@ public class HardcoverPersonProvider : IRemoteMetadataProvider<Person, PersonLoo
     public const string ProviderName = "Hardcover";
 
     private readonly HardcoverApiClient _api;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<HardcoverPersonProvider> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="HardcoverPersonProvider"/> class.
     /// </summary>
-    public HardcoverPersonProvider(HardcoverApiClient api, ILogger<HardcoverPersonProvider> logger)
+    public HardcoverPersonProvider(HardcoverApiClient api, IHttpClientFactory httpClientFactory, ILogger<HardcoverPersonProvider> logger)
     {
         _api = api;
+        _httpClientFactory = httpClientFactory;
         _logger = logger;
     }
 
@@ -121,5 +125,13 @@ public class HardcoverPersonProvider : IRemoteMetadataProvider<Person, PersonLoo
         result.Item = person;
         result.HasMetadata = true;
         return result;
+    }
+
+    /// <inheritdoc />
+    public Task<HttpResponseMessage> GetImageResponse(string url, CancellationToken cancellationToken)
+    {
+        // Hardcover's asset CDN serves author photos without needing the API token.
+        var client = _httpClientFactory.CreateClient(HardcoverApiClient.HttpClientName);
+        return client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
     }
 }
