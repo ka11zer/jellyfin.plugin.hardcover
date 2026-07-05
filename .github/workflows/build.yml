@@ -27,9 +27,15 @@ jobs:
 
       - name: Restore
         run: dotnet restore --no-cache     # ← fresh download
+     
+      - name: Diagnostic – list restored package versions
+        run: dotnet list package --include-transitive
 
       - name: Build
         run: dotnet build --configuration Release --no-restore
+    
+      - name: Diagnostic – show target framework
+        run: dotnet --list-runtimes
 
       - name: Publish
         run: dotnet publish --configuration Release --no-build --output publish
