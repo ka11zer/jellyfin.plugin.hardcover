@@ -1,93 +1,43 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <title>Hardcover Metadata</title>
+    <meta charset="utf-8">
+    <title>Hardcover Settings</title>
 </head>
 <body>
-<div id="HardcoverConfigPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-checkbox">
-    <div data-role="content">
-        <div class="content-primary">
-            <form id="HardcoverConfigForm">
-                <div class="verticalSection">
-                    <h2>Hardcover Metadata Provider</h2>
-                    <p>
-                        Provides book and author metadata sourced from
-                        <a is="emby-linkbutton" class="button-link" href="https://hardcover.app" target="_blank">Hardcover</a>.
-                        You need a free Personal API Token, generated at
-                        <a is="emby-linkbutton" class="button-link" href="https://hardcover.app/account/api" target="_blank">hardcover.app/account/api</a>.
-                    </p>
-                </div>
-
-                <div class="inputContainer">
-                    <label class="inputLabel inputLabelUnfocused" for="ApiToken">API Token</label>
-                    <input id="ApiToken" name="ApiToken" type="password" is="emby-input" autocomplete="off" />
-                    <div class="fieldDescription">
-                        Paste the token exactly as shown on Hardcover (the plugin adds the "Bearer" prefix itself).
-                    </div>
-                </div>
-
-                <div class="checkboxContainer checkboxContainer-withDescription">
-                    <label>
-                        <input id="PreferPopularMatches" name="PreferPopularMatches" type="checkbox" is="emby-checkbox" />
-                        <span>Prefer the most popular match for ambiguous titles</span>
-                    </label>
-                    <div class="fieldDescription checkboxFieldDescription">
-                        When several books share a similar title, pick the one with the most Hardcover readers first.
-                    </div>
-                </div>
-
-                <div class="inputContainer">
-                    <label class="inputLabel inputLabelUnfocused" for="MaxSearchResults">Max search results</label>
-                    <input id="MaxSearchResults" name="MaxSearchResults" type="number" is="emby-input" min="1" max="25" />
-                </div>
-
-                <div>
-                    <button is="emby-button" type="submit" class="raised button-submit block emby-button">
-                        <span>Save</span>
-                    </button>
-                </div>
-            </form>
+    <div data-role="page" id="hardcoverConfigPage">
+        <div data-role="header">
+            <h2>Hardcover Settings</h2>
         </div>
+        <div data-role="content">
+            <div class="ui-field-contain">
+                <label for="txtApiKey">API Key:</label>
+                <input type="text" id="txtApiKey" name="ApiKey" />
+                <div id="errorMsg" style="color:red;"></div>
+            </div>
+            <button type="submit" id="btnSave">Save</button>
+        </div>
+
+        <script>
+            var page = document.getElementById('hardcoverConfigPage');
+            page.addEventListener('pageshow', function () {
+                Dashboard.getPluginConfiguration('Hardcover').then(config => {
+                    document.getElementById('txtApiKey').value = config.ApiKey || '';
+                });
+            });
+
+            document.getElementById('btnSave').addEventListener('click', function () {
+                var config = {
+                    ApiKey: document.getElementById('txtApiKey').value
+                };
+                Dashboard.savePluginConfiguration('Hardcover', config).then(() => {
+                    Dashboard.alert('Settings saved.');
+                }).catch(err => {
+                    document.getElementById('errorMsg').innerText = 'Failed to save.';
+                    console.error(err);
+                });
+            });
+        </script>
     </div>
-</div>
-<script type="text/javascript">
-    (function () {
-        var PluginConfig = {
-            pluginUniqueId: 'a1b2c3d4-e5f6-7890-1234-567890abcdef'
-        };
-
-        function getPage(view) {
-            return view.querySelector('#HardcoverConfigPage');
-        }
-
-        document.querySelector('#HardcoverConfigPage')
-            .addEventListener('pageshow', function () {
-                Dashboard.showLoadingMsg();
-                ApiClient.getPluginConfiguration(PluginConfig.pluginUniqueId).then(function (config) {
-                    document.querySelector('#ApiToken').value = config.ApiToken || '';
-                    document.querySelector('#PreferPopularMatches').checked = config.PreferPopularMatches !== false;
-                    document.querySelector('#MaxSearchResults').value = config.MaxSearchResults || 10;
-                    Dashboard.hideLoadingMsg();
-                });
-            });
-
-        document.querySelector('#HardcoverConfigForm')
-            .addEventListener('submit', function (e) {
-                Dashboard.showLoadingMsg();
-                ApiClient.getPluginConfiguration(PluginConfig.pluginUniqueId).then(function (config) {
-                    config.ApiToken = document.querySelector('#ApiToken').value;
-                    config.PreferPopularMatches = document.querySelector('#PreferPopularMatches').checked;
-                    config.MaxSearchResults = parseInt(document.querySelector('#MaxSearchResults').value, 10) || 10;
-
-                    ApiClient.updatePluginConfiguration(PluginConfig.pluginUniqueId, config).then(function (result) {
-                        Dashboard.processPluginConfigurationUpdateResult(result);
-                    });
-                });
-
-                e.preventDefault();
-                return false;
-            });
-    })();
-</script>
 </body>
 </html>
