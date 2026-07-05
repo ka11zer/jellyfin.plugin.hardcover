@@ -14,13 +14,12 @@ namespace Jellyfin.Plugin.Hardcover.Providers;
 
 public class HardcoverBookProvider : IRemoteMetadataProvider<Book, BookInfo>, IHasOrder
 {
+    private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(30) };
     private readonly IHardcoverApiService _api;
-    private readonly ILogger<HardcoverBookProvider> _logger;
 
-    public HardcoverBookProvider(IHardcoverApiService api, ILogger<HardcoverBookProvider> logger)
+    public HardcoverBookProvider(ILogger<HardcoverBookProvider> logger)
     {
-        _api = api;
-        _logger = logger;
+        _api = new HardcoverApiService(_httpClient, logger);
     }
 
     public string Name => "Hardcover";
@@ -30,14 +29,12 @@ public class HardcoverBookProvider : IRemoteMetadataProvider<Book, BookInfo>, IH
     {
         var results = new List<RemoteSearchResult>();
         var books = await _api.SearchBooksAsync(searchInfo.Name, cancellationToken);
-
         foreach (var book in books)
         {
             var result = new RemoteSearchResult
             {
                 Name = book.Title,
                 SearchProviderName = Name,
-                PremiereDate = null, // we may fill later
             };
             result.SetProviderId("Hardcover", book.Slug);
             results.Add(result);
@@ -52,9 +49,7 @@ public class HardcoverBookProvider : IRemoteMetadataProvider<Book, BookInfo>, IH
         BookDetails? book = null;
 
         if (!string.IsNullOrEmpty(existingId))
-        {
             book = await _api.GetBookByIdAsync(existingId, cancellationToken);
-        }
 
         if (book == null)
         {
@@ -64,8 +59,7 @@ public class HardcoverBookProvider : IRemoteMetadataProvider<Book, BookInfo>, IH
                 book = await _api.GetBookByIdAsync(best.Slug, cancellationToken);
         }
 
-        if (book == null)
-            return result;
+        if (book == null) return result;
 
         result.Item = new Book
         {
@@ -74,31 +68,23 @@ public class HardcoverBookProvider : IRemoteMetadataProvider<Book, BookInfo>, IH
             ProductionYear = book.PublicationYear,
         };
 
-        // Add authors as people (links to Person library)
         if (book.Authors?.Any() == true)
         {
-            // We only get names; we could optionally search for them and set IDs.
-            result.Item.AddPerson(CreatePersonInfo(book.Authors));
+            result.Item.AddPerson(book.Authors.Select(a => new PersonInfo
+            {
+                Name = a,
+                Type = PersonKind.Author
+            }).ToArray());
         }
 
         result.HasMetadata = true;
         result.Provider = Name;
         result.Item.ProviderIds["Hardcover"] = book.Slug;
 
-        // Store publisher in studio?
         if (!string.IsNullOrEmpty(book.Publisher))
             result.Item.Studios = new[] { book.Publisher };
 
         return result;
-    }
-
-    private static PersonInfo[] CreatePersonInfo(List<string> authors)
-    {
-        return authors.Select(a => new PersonInfo
-        {
-            Name = a,
-            Type = PersonKind.Author
-        }).ToArray();
     }
 
     public Task<HttpResponseMessage> GetImageResponse(string url, CancellationToken cancellationToken)
