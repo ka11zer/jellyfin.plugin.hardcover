@@ -17,10 +17,10 @@ public class HardcoverPersonProvider : IRemoteMetadataProvider<Person, PersonLoo
 {
     private readonly IHardcoverApiService _api;
 
-    public HardcoverPersonProvider(ILogger<HardcoverPersonProvider> logger)
+    public HardcoverPersonProvider(ILoggerFactory loggerFactory)
     {
         var client = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
-        _api = new HardcoverApiService(client, logger);
+        _api = new HardcoverApiService(client, loggerFactory);
     }
 
     public string Name => "Hardcover";
