@@ -1,12 +1,9 @@
-using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.Hardcover.Api;
-using Jellyfin.Plugin.Hardcover.Api.Models;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Model.Entities;
@@ -15,124 +12,82 @@ using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.Hardcover.Providers;
 
-/// <summary>
-/// Supplies author metadata (bio, birth/death dates, photo) from Hardcover for Person
-/// entries linked to books (e.g. via <see cref="HardcoverBookProvider"/>'s contributions).
-/// </summary>
-public class HardcoverPersonProvider : IRemoteMetadataProvider<Person, PersonLookupInfo>
+public class HardcoverPersonProvider : IRemoteMetadataProvider<Person, PersonInfo>, IHasOrder
 {
-    /// <summary>
-    /// The provider id key used to stash the Hardcover author id on Person items.
-    /// </summary>
-    public const string ProviderName = "Hardcover";
-
-    private readonly HardcoverApiClient _api;
-    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IHardcoverApiService _api;
     private readonly ILogger<HardcoverPersonProvider> _logger;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="HardcoverPersonProvider"/> class.
-    /// </summary>
-    public HardcoverPersonProvider(HardcoverApiClient api, IHttpClientFactory httpClientFactory, ILogger<HardcoverPersonProvider> logger)
+    public HardcoverPersonProvider(IHardcoverApiService api, ILogger<HardcoverPersonProvider> logger)
     {
         _api = api;
-        _httpClientFactory = httpClientFactory;
         _logger = logger;
     }
 
-    /// <inheritdoc />
-    public string Name => ProviderName;
+    public string Name => "Hardcover";
+    public int Order => 1; // After default providers, before others
 
-    /// <inheritdoc />
-    public async Task<IEnumerable<RemoteSearchResult>> GetSearchResults(PersonLookupInfo searchInfo, CancellationToken cancellationToken)
+    public async Task<IEnumerable<RemoteSearchResult>> GetSearchResults(PersonInfo searchInfo, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(searchInfo.Name) || !HardcoverApiClient.HasApiToken)
+        var results = new List<RemoteSearchResult>();
+        var authors = await _api.SearchAuthorsAsync(searchInfo.Name, cancellationToken);
+
+        foreach (var author in authors)
         {
-            return Enumerable.Empty<RemoteSearchResult>();
+            var result = new RemoteSearchResult
+            {
+                Name = author.Name,
+                SearchProviderName = Name,
+                ImageUrl = null, // will be filled if we had a search image
+            };
+            result.SetProviderId("Hardcover", author.Slug);
+            results.Add(result);
         }
-
-        var maxResults = HardcoverPlugin.Instance?.Configuration.MaxSearchResults ?? 10;
-        var authors = await _api.SearchAuthorsAsync(searchInfo.Name, maxResults, cancellationToken).ConfigureAwait(false);
-
-        return authors.Select(author => new RemoteSearchResult
-        {
-            Name = author.Name,
-            SearchProviderName = ProviderName,
-            ImageUrl = author.Image?.Url,
-            ProviderIds = { [ProviderName] = author.Id.ToString(CultureInfo.InvariantCulture) }
-        });
+        return results;
     }
 
-    /// <inheritdoc />
-    public async Task<MetadataResult<Person>> GetMetadata(PersonLookupInfo info, CancellationToken cancellationToken)
+    public async Task<MetadataResult<Person>> GetMetadata(PersonInfo info, CancellationToken cancellationToken)
     {
-        var result = new MetadataResult<Person> { HasMetadata = false };
+        var result = new MetadataResult<Person>();
 
-        if (!HardcoverApiClient.HasApiToken)
+        // Try to find existing Hardcover ID
+        var existingId = info.ProviderIds.GetOrDefault("Hardcover");
+        AuthorDetails? author = null;
+
+        if (!string.IsNullOrEmpty(existingId))
         {
+            author = await _api.GetAuthorByIdAsync(existingId, cancellationToken);
+        }
+
+        if (author == null)
+        {
+            // Search by name and pick first match
+            var searchResults = await _api.SearchAuthorsAsync(info.Name, cancellationToken);
+            var best = searchResults.FirstOrDefault();
+            if (best != null)
+                author = await _api.GetAuthorByIdAsync(best.Slug, cancellationToken);
+        }
+
+        if (author == null)
             return result;
-        }
 
-        HardcoverAuthor? author = null;
-
-        if (info.ProviderIds.TryGetValue(ProviderName, out var idString) && int.TryParse(idString, out var id))
-        {
-            author = await _api.GetAuthorAsync(id, cancellationToken).ConfigureAwait(false);
-        }
-
-        if (author is null && !string.IsNullOrWhiteSpace(info.Name))
-        {
-            var maxResults = HardcoverPlugin.Instance?.Configuration.MaxSearchResults ?? 10;
-            var candidates = await _api.SearchAuthorsAsync(info.Name, maxResults, cancellationToken).ConfigureAwait(false);
-
-            // Prefer an exact (case-insensitive) name match over the most-prolific author
-            // sharing a substring of the name.
-            var best = candidates.FirstOrDefault(a => string.Equals(a.Name, info.Name, StringComparison.OrdinalIgnoreCase))
-                       ?? candidates.OrderByDescending(a => a.BooksCount ?? 0).FirstOrDefault();
-
-            if (best is not null)
-            {
-                author = await _api.GetAuthorAsync(best.Id, cancellationToken).ConfigureAwait(false);
-            }
-        }
-
-        if (author is null)
-        {
-            return result;
-        }
-
-        var person = new Person
+        result.Item = new Person
         {
             Name = author.Name,
-            Overview = author.Bio
+            Overview = string.IsNullOrWhiteSpace(author.Biography) ? null : author.Biography,
         };
 
-        if (DateTime.TryParse(author.BornDate, CultureInfo.InvariantCulture, DateTimeStyles.None, out var born))
-        {
-            person.PremiereDate = born;
-        }
-
-        if (DateTime.TryParse(author.DeathDate, CultureInfo.InvariantCulture, DateTimeStyles.None, out var died))
-        {
-            person.EndDate = died;
-        }
-
-        person.SetProviderId(ProviderName, author.Id.ToString(CultureInfo.InvariantCulture));
-        if (!string.IsNullOrEmpty(author.Slug))
-        {
-            person.HomePageUrl = $"https://hardcover.app/authors/{author.Slug}";
-        }
-
-        result.Item = person;
         result.HasMetadata = true;
+        result.Provider = Name;
+
+        // Store provider ID
+        result.Item.ProviderIds["Hardcover"] = author.Slug;
+
+        // If author has an image URL, we could set it here, but better to use an image provider.
+        // We'll let the image provider handle covers.
+
         return result;
     }
 
-    /// <inheritdoc />
     public Task<HttpResponseMessage> GetImageResponse(string url, CancellationToken cancellationToken)
-    {
-        // Hardcover's asset CDN serves author photos without needing the API token.
-        var client = _httpClientFactory.CreateClient(HardcoverApiClient.HttpClientName);
-        return client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-    }
+        => Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.NotFound));
 }
