@@ -17,10 +17,10 @@ public class HardcoverBookProvider : IRemoteMetadataProvider<Book, BookInfo>, IH
 {
     private readonly IHardcoverApiService _api;
 
-    public HardcoverBookProvider(ILogger<HardcoverBookProvider> logger)
+    public HardcoverBookProvider(ILoggerFactory loggerFactory)
     {
         var client = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
-        _api = new HardcoverApiService(client, logger);
+        _api = new HardcoverApiService(client, loggerFactory);
     }
 
     public string Name => "Hardcover";
@@ -68,16 +68,8 @@ public class HardcoverBookProvider : IRemoteMetadataProvider<Book, BookInfo>, IH
             Name = book.Title,
             Overview = book.Description,
             ProductionYear = book.PublicationYear,
+            Authors = book.Authors?.Any() == true ? string.Join(", ", book.Authors) : null,
         };
-
-        if (book.Authors?.Any() == true)
-        {
-            result.Item.People = book.Authors.Select(a => new PersonInfo
-            {
-                Name = a,
-                Type = PersonType.Author
-            }).ToList();
-        }
 
         result.HasMetadata = true;
         result.Provider = Name;
