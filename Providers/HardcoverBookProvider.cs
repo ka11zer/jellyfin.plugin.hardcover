@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
@@ -14,12 +15,12 @@ namespace Jellyfin.Plugin.Hardcover.Providers;
 
 public class HardcoverBookProvider : IRemoteMetadataProvider<Book, BookInfo>, IHasOrder
 {
-    private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(30) };
     private readonly IHardcoverApiService _api;
 
     public HardcoverBookProvider(ILogger<HardcoverBookProvider> logger)
     {
-        _api = new HardcoverApiService(_httpClient, logger);
+        var client = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+        _api = new HardcoverApiService(client, logger);
     }
 
     public string Name => "Hardcover";
@@ -45,7 +46,8 @@ public class HardcoverBookProvider : IRemoteMetadataProvider<Book, BookInfo>, IH
     public async Task<MetadataResult<Book>> GetMetadata(BookInfo info, CancellationToken cancellationToken)
     {
         var result = new MetadataResult<Book>();
-        var existingId = info.ProviderIds.GetOrDefault("Hardcover");
+        string? existingId = null;
+        info.ProviderIds.TryGetValue("Hardcover", out existingId);
         BookDetails? book = null;
 
         if (!string.IsNullOrEmpty(existingId))
@@ -70,11 +72,11 @@ public class HardcoverBookProvider : IRemoteMetadataProvider<Book, BookInfo>, IH
 
         if (book.Authors?.Any() == true)
         {
-            result.Item.AddPerson(book.Authors.Select(a => new PersonInfo
+            result.Item.People = book.Authors.Select(a => new PersonInfo
             {
                 Name = a,
-                Type = PersonKind.Author
-            }).ToArray());
+                Type = PersonType.Author
+            }).ToList();
         }
 
         result.HasMetadata = true;
