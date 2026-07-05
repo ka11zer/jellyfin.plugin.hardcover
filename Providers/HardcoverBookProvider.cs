@@ -73,14 +73,11 @@ public class HardcoverBookProvider : IRemoteMetadataProvider<Book, BookInfo>, IH
         // Add authors as persons
         if (book.Authors?.Any() == true)
         {
-            foreach (var authorName in book.Authors)
+            result.Item.People = book.Authors.Select(a => new PersonInfo
             {
-                result.Item.AddPerson(new PersonInfo
-                {
-                    Name = authorName,
-                    Type = PersonKind.Author
-                });
-            }
+                Name = a,
+                Type = PersonType.Author
+            }).ToList();
         }
 
         result.HasMetadata = true;
