@@ -2,39 +2,108 @@
 <html>
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Hardcover Settings</title>
 </head>
 <body>
-    <div data-role="page" id="hardcoverConfigPage">
-        <div data-role="header">
-            <h2>Hardcover Settings</h2>
-        </div>
+    <div id="hardcoverConfigPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-select">
         <div data-role="content">
-            <div class="ui-field-contain">
-                <label for="txtApiKey">API Key:</label>
-                <input type="text" id="txtApiKey" name="ApiKey" />
-                <div id="errorMsg" style="color:red;"></div>
+            <div class="content-primary">
+                <form class="hardcoverSettingsForm">
+                    <div class="verticalSection">
+                        <h2 class="sectionTitle">Hardcover API Configuration</h2>
+                        <p class="fieldDescription">
+                            Enter your Hardcover API key to enable metadata fetching for books and authors.
+                            You can get your API key from the
+                            <a href="https://hardcover.app/account/api" target="_blank" rel="noopener noreferrer">Hardcover API settings page</a>.
+                        </p>
+
+                        <div class="inputContainer">
+                            <label class="inputLabel inputLabelUnfocused" for="txtApiKey">API Key</label>
+                            <input is="emby-input" id="txtApiKey" type="password" label="API Key" class="emby-input" autocomplete="off" />
+                            <div class="fieldDescription">
+                                Your personal Hardcover API token. This is required for the plugin to fetch metadata.
+                            </div>
+                        </div>
+
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label>
+                                <input type="checkbox" is="emby-checkbox" id="chkShowKey" />
+                                <span>Show API key</span>
+                            </label>
+                        </div>
+
+                        <div class="verticalSection">
+                            <h3 class="sectionTitle">Status</h3>
+                            <div id="statusMessage" class="fieldDescription" style="padding: 10px; border-radius: 4px; display: none;"></div>
+                        </div>
+
+                        <div class="formDialogFooter">
+                            <button is="emby-button" type="submit" class="raised button-submit block formDialogFooterItem">
+                                <span>Save</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="verticalSection" style="margin-top: 2em;">
+                        <h3 class="sectionTitle">About Hardcover</h3>
+                        <p class="fieldDescription">
+                            Hardcover is a social platform for book lovers. This plugin fetches rich metadata including:
+                        </p>
+                        <ul class="fieldDescription" style="padding-left: 20px;">
+                            <li>Book descriptions and publication details</li>
+                            <li>Author biographies</li>
+                            <li>Book cover images</li>
+                            <li>Publisher information</li>
+                        </ul>
+                        <p class="fieldDescription">
+                            <a href="https://hardcover.app" target="_blank" rel="noopener noreferrer">Visit Hardcover</a>
+                        </p>
+                    </div>
+                </form>
             </div>
-            <button type="submit" id="btnSave">Save</button>
         </div>
 
-        <script>
+        <script type="text/javascript">
             var page = document.getElementById('hardcoverConfigPage');
-            page.addEventListener('pageshow', function () {
-                Dashboard.getPluginConfiguration('Hardcover').then(config => {
-                    document.getElementById('txtApiKey').value = config.ApiKey || '';
+            var apiKeyInput = document.getElementById('txtApiKey');
+            var showKeyCheckbox = document.getElementById('chkShowKey');
+            var statusMessage = document.getElementById('statusMessage');
+            var form = document.querySelector('.hardcoverSettingsForm');
+
+            function showStatus(message, isError) {
+                statusMessage.style.display = 'block';
+                statusMessage.textContent = message;
+                statusMessage.style.backgroundColor = isError ? '#ffebee' : '#e8f5e9';
+                statusMessage.style.color = isError ? '#c62828' : '#2e7d32';
+                setTimeout(function() {
+                    statusMessage.style.display = 'none';
+                }, 5000);
+            }
+
+            page.addEventListener('pageshow', function() {
+                ApiClient.getPluginConfiguration('Hardcover').then(function(config) {
+                    apiKeyInput.value = config.ApiKey || '';
+                }).catch(function(err) {
+                    showStatus('Failed to load configuration: ' + err, true);
                 });
             });
 
-            document.getElementById('btnSave').addEventListener('click', function () {
+            showKeyCheckbox.addEventListener('change', function() {
+                apiKeyInput.type = this.checked ? 'text' : 'password';
+            });
+
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
                 var config = {
-                    ApiKey: document.getElementById('txtApiKey').value
+                    ApiKey: apiKeyInput.value.trim()
                 };
-                Dashboard.savePluginConfiguration('Hardcover', config).then(() => {
-                    Dashboard.alert('Settings saved.');
-                }).catch(err => {
-                    document.getElementById('errorMsg').innerText = 'Failed to save.';
-                    console.error(err);
+
+                ApiClient.updatePluginConfiguration('Hardcover', config).then(function() {
+                    showStatus('Settings saved successfully!', false);
+                }).catch(function(err) {
+                    showStatus('Failed to save settings: ' + err, true);
                 });
             });
         </script>
