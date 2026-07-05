@@ -8,19 +8,19 @@ using Jellyfin.Plugin.Hardcover.Configuration;
 
 namespace Jellyfin.Plugin.Hardcover;
 
-public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
+public class HardcoverPlugin : BasePlugin<PluginConfiguration>, IHasWebPages
 {
-    public Plugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer)
+    public HardcoverPlugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer)
         : base(applicationPaths, xmlSerializer)
     {
         Instance = this;
     }
 
-    public static Plugin? Instance { get; private set; }
+    public static HardcoverPlugin? Instance { get; private set; }
 
     public override string Name => "Hardcover";
     public override string Description => "Fetches metadata for books and authors from Hardcover.";
-    public override Guid Id => Guid.Parse("a1b2c3d4-e5f6-7890-1234-567890abcdef"); // Keep your existing GUID
+    public override Guid Id => Guid.Parse("a1b2c3d4-e5f6-7890-1234-567890abcdef"); // ← use your actual plugin GUID!
 
     public IEnumerable<PluginPageInfo> GetPages()
     {
