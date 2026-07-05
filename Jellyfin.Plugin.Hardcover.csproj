@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <RootNamespace>Jellyfin.Plugin.Hardcover</RootNamespace>
+
+    <!--
+      IMPORTANT: These package versions must match your Jellyfin *server* version exactly,
+      or the plugin will fail to load ("Error loading plugin" in the server log).
+
+      Check your server version with: jellyfin --version  (or Dashboard -> About)
+      Then set the versions below to match, e.g. server 10.9.11 -> packages 10.9.11.
+    -->
+    <JellyfinVersion>10.9.11</JellyfinVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Jellyfin.Controller" Version="$(JellyfinVersion)" />
+    <PackageReference Include="Jellyfin.Model" Version="$(JellyfinVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Ship the config page as an embedded resource so Jellyfin can serve it in the dashboard -->
+    <EmbeddedResource Include="Configuration\configPage.html" />
+  </ItemGroup>
+
+</Project>
