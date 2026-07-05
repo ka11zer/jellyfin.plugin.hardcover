@@ -2,30 +2,21 @@
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <FileVersion>1.0.0.0</FileVersion>
-    <RootNamespace>Jellyfin.Plugin.Hardcover</RootNamespace>
-
-    <!--
-      IMPORTANT: These package versions must match your Jellyfin *server* version exactly,
-      or the plugin will fail to load ("Error loading plugin" in the server log).
-
-      Check your server version via Dashboard -> About in the web UI,
-      or by running the server binary with the version flag.
-      Then set the versions below to match, e.g. server 10.9.11 -> packages 10.9.11.
-    -->
-    <JellyfinVersion>10.9.11</JellyfinVersion>
+    <Authors>ka11zer</Authors>
+    <Description>Metadata plugin for books and authors from Hardcover.</Description>
+    <PackageProjectUrl>https://github.com/ka11zer/jellyfin.plugin.hardcover</PackageProjectUrl>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Jellyfin.Controller" Version="$(JellyfinVersion)" />
-    <PackageReference Include="Jellyfin.Model" Version="$(JellyfinVersion)" />
+    <PackageReference Include="Jellyfin.Controller" Version="10.*" />
+    <PackageReference Include="Jellyfin.Model" Version="10.*" />
+    <PackageReference Include="System.Text.Json" Version="8.0.4" />
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Ship the config page as an embedded resource so Jellyfin can serve it in the dashboard -->
+    <None Remove="Configuration\configPage.html" />
     <EmbeddedResource Include="Configuration\configPage.html" />
   </ItemGroup>
 
