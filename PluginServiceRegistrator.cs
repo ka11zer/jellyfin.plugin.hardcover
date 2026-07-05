@@ -18,11 +18,8 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
             client.Timeout = TimeSpan.FromSeconds(30);
         });
 
-        // Register metadata providers for Books
         services.AddSingleton<IMetadataProvider<Book>, HardcoverBookProvider>();
         services.AddSingleton<IRemoteImageProvider, HardcoverBookImageProvider>();
-
-        // Register metadata provider for Authors (Person)
         services.AddSingleton<IMetadataProvider<Person>, HardcoverPersonProvider>();
     }
 }
