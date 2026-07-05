@@ -3,7 +3,6 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.Hardcover.Api;
-using MediaBrowser.Common.Net;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Model.Entities;
@@ -14,19 +13,16 @@ namespace Jellyfin.Plugin.Hardcover.Providers;
 
 public class HardcoverBookImageProvider : IRemoteImageProvider
 {
+    private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(30) };
     private readonly IHardcoverApiService _api;
-    private readonly IHttpClientFactory _httpClientFactory;
-    private readonly ILogger<HardcoverBookImageProvider> _logger;
 
-    public HardcoverBookImageProvider(IHardcoverApiService api, IHttpClientFactory httpClientFactory, ILogger<HardcoverBookImageProvider> logger)
+    public HardcoverBookImageProvider(ILogger<HardcoverBookImageProvider> logger)
     {
-        _api = api;
-        _httpClientFactory = httpClientFactory;
-        _logger = logger;
+        _api = new HardcoverApiService(_httpClient, logger);
     }
 
     public string Name => "Hardcover";
-    public bool Supports(BaseItem item) => item is Book;  // or Person if we add author images
+    public bool Supports(BaseItem item) => item is Book;
 
     public IEnumerable<ImageType> GetSupportedImages(BaseItem item) => new[] { ImageType.Primary };
 
@@ -34,8 +30,7 @@ public class HardcoverBookImageProvider : IRemoteImageProvider
     {
         var list = new List<RemoteImageInfo>();
         var slug = item.ProviderIds.GetOrDefault("Hardcover");
-        if (string.IsNullOrEmpty(slug))
-            yield break;
+        if (string.IsNullOrEmpty(slug)) return list;
 
         var covers = await _api.GetBookCoverUrlsAsync(slug, cancellationToken);
         foreach (var url in covers)
@@ -52,7 +47,7 @@ public class HardcoverBookImageProvider : IRemoteImageProvider
 
     public Task<HttpResponseMessage> GetImageResponse(string url, CancellationToken cancellationToken)
     {
-        var client = _httpClientFactory.CreateClient();
+        var client = new HttpClient(); // or reuse static _httpClient
         return client.GetAsync(url, cancellationToken);
     }
 }
