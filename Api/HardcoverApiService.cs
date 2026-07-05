@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading;
@@ -28,10 +27,10 @@ public class HardcoverApiService : IHardcoverApiService
     private static readonly TimeSpan CacheDuration = TimeSpan.FromHours(1);
     private static readonly SemaphoreSlim RateLimiter = new(1, 1);
 
-    public HardcoverApiService(HttpClient httpClient, ILogger<HardcoverApiService> logger)
+    public HardcoverApiService(HttpClient httpClient, ILoggerFactory loggerFactory)
     {
         _httpClient = httpClient;
-        _logger = logger;
+        _logger = loggerFactory.CreateLogger<HardcoverApiService>();
     }
 
     private string GetApiKey()
@@ -73,9 +72,9 @@ public class HardcoverApiService : IHardcoverApiService
     {
         try
         {
-            var results = await GetCachedOrFetchAsync($"author_search_{name}", async () =>
-                await GetFromApiAsync<List<AuthorSearchResult>>($"authors/search?q={Uri.EscapeDataString(name)}", cancellationToken));
-            return results ?? new List<AuthorSearchResult>();
+            return await GetCachedOrFetchAsync($"author_search_{name}", async () =>
+                await GetFromApiAsync<List<AuthorSearchResult>>($"authors/search?q={Uri.EscapeDataString(name)}", cancellationToken))
+                ?? new List<AuthorSearchResult>();
         }
         catch (Exception ex)
         {
@@ -102,9 +101,9 @@ public class HardcoverApiService : IHardcoverApiService
     {
         try
         {
-            var results = await GetCachedOrFetchAsync($"book_search_{title}", async () =>
-                await GetFromApiAsync<List<BookSearchResult>>($"books/search?q={Uri.EscapeDataString(title)}", cancellationToken));
-            return results ?? new List<BookSearchResult>();
+            return await GetCachedOrFetchAsync($"book_search_{title}", async () =>
+                await GetFromApiAsync<List<BookSearchResult>>($"books/search?q={Uri.EscapeDataString(title)}", cancellationToken))
+                ?? new List<BookSearchResult>();
         }
         catch (Exception ex)
         {
