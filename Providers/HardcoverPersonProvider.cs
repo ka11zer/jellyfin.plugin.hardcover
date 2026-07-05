@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.Hardcover.Providers;
 
-public class HardcoverPersonProvider : IRemoteMetadataProvider<Person, PersonInfo>, IHasOrder
+public class HardcoverPersonProvider : IRemoteMetadataProvider<Person, PersonLookupInfo>, IHasOrder
 {
     private readonly IHardcoverApiService _api;
     private readonly ILogger<HardcoverPersonProvider> _logger;
@@ -24,9 +24,9 @@ public class HardcoverPersonProvider : IRemoteMetadataProvider<Person, PersonInf
     }
 
     public string Name => "Hardcover";
-    public int Order => 1; // After default providers, before others
+    public int Order => 1;
 
-    public async Task<IEnumerable<RemoteSearchResult>> GetSearchResults(PersonInfo searchInfo, CancellationToken cancellationToken)
+    public async Task<IEnumerable<RemoteSearchResult>> GetSearchResults(PersonLookupInfo searchInfo, CancellationToken cancellationToken)
     {
         var results = new List<RemoteSearchResult>();
         var authors = await _api.SearchAuthorsAsync(searchInfo.Name, cancellationToken);
@@ -37,7 +37,6 @@ public class HardcoverPersonProvider : IRemoteMetadataProvider<Person, PersonInf
             {
                 Name = author.Name,
                 SearchProviderName = Name,
-                ImageUrl = null, // will be filled if we had a search image
             };
             result.SetProviderId("Hardcover", author.Slug);
             results.Add(result);
@@ -45,11 +44,11 @@ public class HardcoverPersonProvider : IRemoteMetadataProvider<Person, PersonInf
         return results;
     }
 
-    public async Task<MetadataResult<Person>> GetMetadata(PersonInfo info, CancellationToken cancellationToken)
+    public async Task<MetadataResult<Person>> GetMetadata(PersonLookupInfo info, CancellationToken cancellationToken)
     {
         var result = new MetadataResult<Person>();
 
-        // Try to find existing Hardcover ID
+        // Try existing Hardcover ID
         var existingId = info.ProviderIds.GetOrDefault("Hardcover");
         AuthorDetails? author = null;
 
@@ -60,7 +59,6 @@ public class HardcoverPersonProvider : IRemoteMetadataProvider<Person, PersonInf
 
         if (author == null)
         {
-            // Search by name and pick first match
             var searchResults = await _api.SearchAuthorsAsync(info.Name, cancellationToken);
             var best = searchResults.FirstOrDefault();
             if (best != null)
@@ -78,12 +76,7 @@ public class HardcoverPersonProvider : IRemoteMetadataProvider<Person, PersonInf
 
         result.HasMetadata = true;
         result.Provider = Name;
-
-        // Store provider ID
         result.Item.ProviderIds["Hardcover"] = author.Slug;
-
-        // If author has an image URL, we could set it here, but better to use an image provider.
-        // We'll let the image provider handle covers.
 
         return result;
     }
