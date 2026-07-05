@@ -19,17 +19,27 @@ public class HardcoverPersonProvider : IRemoteMetadataProvider<Person, PersonLoo
 
     public HardcoverPersonProvider(ILoggerFactory loggerFactory)
     {
-        var client = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+        var client = new HttpClient 
+        { 
+            Timeout = TimeSpan.FromSeconds(30),
+            BaseAddress = new Uri("https://api.hardcover.app/v1/")
+        };
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("Jellyfin.Hardcover/1.0");
         _api = new HardcoverApiService(client, loggerFactory);
     }
 
     public string Name => "Hardcover";
-    public int Order => 1;
+    public int Order => 0;
 
     public async Task<IEnumerable<RemoteSearchResult>> GetSearchResults(PersonLookupInfo searchInfo, CancellationToken cancellationToken)
     {
         var results = new List<RemoteSearchResult>();
+        
+        if (string.IsNullOrWhiteSpace(searchInfo.Name))
+            return results;
+
         var authors = await _api.SearchAuthorsAsync(searchInfo.Name, cancellationToken);
+        
         foreach (var author in authors)
         {
             var result = new RemoteSearchResult
@@ -40,6 +50,7 @@ public class HardcoverPersonProvider : IRemoteMetadataProvider<Person, PersonLoo
             result.SetProviderId("Hardcover", author.Slug);
             results.Add(result);
         }
+        
         return results;
     }
 
