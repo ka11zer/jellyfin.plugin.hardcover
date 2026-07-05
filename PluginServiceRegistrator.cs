@@ -1,8 +1,8 @@
 using Jellyfin.Plugin.Hardcover.Api;
 using Jellyfin.Plugin.Hardcover.Providers;
+using MediaBrowser.Common.Plugins;          // <-- This is the missing using
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Providers;
-using MediaBrowser.Controller.Library;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Jellyfin.Plugin.Hardcover;
@@ -11,7 +11,6 @@ public class HardcoverPluginServiceRegistrator : IPluginServiceRegistrator
 {
     public void RegisterServices(IServiceCollection services)
     {
-        // Register the API service with an HttpClient
         services.AddHttpClient<IHardcoverApiService, HardcoverApiService>(client =>
         {
             client.BaseAddress = new Uri("https://api.hardcover.app/v1/");
@@ -19,11 +18,11 @@ public class HardcoverPluginServiceRegistrator : IPluginServiceRegistrator
             client.Timeout = TimeSpan.FromSeconds(30);
         });
 
-        // Register metadata providers
-        services.AddSingleton<IMetadataProvider<Person>, HardcoverPersonProvider>();
+        // Providers for Books
         services.AddSingleton<IMetadataProvider<Book>, HardcoverBookProvider>();
-
-        // Register remote image provider for books
         services.AddSingleton<IRemoteImageProvider, HardcoverBookImageProvider>();
+
+        // Providers for Authors (Person)
+        services.AddSingleton<IMetadataProvider<Person>, HardcoverPersonProvider>();
     }
 }
