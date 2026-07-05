@@ -63,31 +63,18 @@ public class HardcoverBookProvider : IRemoteMetadataProvider<Book, BookInfo>, IH
 
         if (book == null) return result;
 
-        var item = new Book
+        result.Item = new Book
         {
             Name = book.Title,
             Overview = book.Description,
             ProductionYear = book.PublicationYear,
         };
 
-        // Add authors as writers (closest person type for books)
-        if (book.Authors?.Any() == true)
-        {
-            foreach (var authorName in book.Authors)
-            {
-                item.AddPerson(new PersonInfo
-                {
-                    Name = authorName,
-                    Type = PersonType.Writer
-                });
-            }
-        }
+        result.Item.ProviderIds["Hardcover"] = book.Slug;
 
-        item.ProviderIds["Hardcover"] = book.Slug;
         if (!string.IsNullOrEmpty(book.Publisher))
-            item.Studios = new[] { book.Publisher };
+            result.Item.Studios = new[] { book.Publisher };
 
-        result.Item = item;
         result.HasMetadata = true;
         result.Provider = Name;
 
