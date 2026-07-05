@@ -32,7 +32,7 @@ public class HardcoverApiService : IHardcoverApiService
     }
 
     private PluginConfiguration GetConfig() =>
-        _configManager.GetPluginConfiguration<PluginConfiguration>(Plugin.Instance!.Id);
+        _configManager.GetPluginConfiguration<PluginConfiguration>(HardcoverPlugin.Instance!.Id);
 
     private async Task<T?> GetFromApiAsync<T>(string endpoint, CancellationToken cancellationToken)
     {
