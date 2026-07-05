@@ -1,0 +1,118 @@
+name: Build plugin
+
+on:
+  push:
+    branches: [ "main" ]
+    tags: [ "v*" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Publish
+        run: dotnet publish --configuration Release --no-build --output publish
+
+      - name: Package zip
+        run: |
+          mkdir -p artifact
+          cd publish
+          zip -r ../artifact/Jellyfin.Plugin.Hardcover.zip Jellyfin.Plugin.Hardcover.dll
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Jellyfin.Plugin.Hardcover
+          path: artifact/Jellyfin.Plugin.Hardcover.zip
+
+      # Everything below this line only runs when you publish a GitHub Release
+      # with a tag like "v1.0.0.0" -- it's what turns this repo into an
+      # installable Jellyfin plugin repository.
+
+      - name: Create GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        id: release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifact/Jellyfin.Plugin.Hardcover.zip
+
+      - name: Update plugin manifest.json
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          pip install --quiet pyyaml
+          VERSION="${GITHUB_REF_NAME#v}"
+          CHECKSUM=$(md5sum artifact/Jellyfin.Plugin.Hardcover.zip | cut -d " " -f 1)
+          SOURCE_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/Jellyfin.Plugin.Hardcover.zip"
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          python3 - "$VERSION" "$CHECKSUM" "$SOURCE_URL" "$TIMESTAMP" <<'EOF'
+          import json, sys, yaml, os
+
+          version, checksum, source_url, timestamp = sys.argv[1:5]
+
+          with open("build.yaml") as f:
+              meta = yaml.safe_load(f)
+
+          manifest_path = "manifest.json"
+          if os.path.exists(manifest_path):
+              with open(manifest_path) as f:
+                  manifest = json.load(f)
+          else:
+              manifest = []
+
+          entry = next((p for p in manifest if p.get("guid") == meta["guid"]), None)
+          if entry is None:
+              entry = {
+                  "guid": meta["guid"],
+                  "name": meta["name"],
+                  "description": meta["description"].strip(),
+                  "overview": meta["overview"],
+                  "owner": meta["owner"],
+                  "category": meta["category"],
+                  "imageUrl": "",
+                  "versions": []
+              }
+              manifest.append(entry)
+
+          # Drop any existing entry for this exact version, then add the fresh one on top.
+          entry["versions"] = [v for v in entry["versions"] if v["version"] != version]
+          entry["versions"].insert(0, {
+              "version": version,
+              "changelog": meta.get("changelog", "").strip(),
+              "targetAbi": meta["targetAbi"],
+              "sourceUrl": source_url,
+              "checksum": checksum,
+              "timestamp": timestamp
+          })
+
+          with open(manifest_path, "w") as f:
+              json.dump(manifest, f, indent=2)
+              f.write("\n")
+          EOF
+
+      - name: Commit manifest.json
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add manifest.json
+          git diff --cached --quiet && echo "No manifest changes" || git commit -m "Update manifest.json for ${GITHUB_REF_NAME}"
+          git push origin HEAD:main
