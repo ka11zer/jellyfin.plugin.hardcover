@@ -9,6 +9,14 @@
     "imageUrl": "",
     "versions": [
       {
+        "version": "2026.7.5.915",
+        "changelog": "- 1.0.0.0: Initial release. Book metadata + search, author metadata + search, cover/photo images.",
+        "targetAbi": "10.9.0.0",
+        "sourceUrl": "https://github.com/ka11zer/jellyfin.plugin.hardcover/releases/download/v2026.7.5.915/Jellyfin.Plugin.Hardcover.zip",
+        "checksum": "c61ce989caaf762fdb0bb5cb1813bea1",
+        "timestamp": "2026-07-05T09:15:32Z"
+      },
+      {
         "version": "2026.7.5.906",
         "changelog": "- 1.0.0.0: Initial release. Book metadata + search, author metadata + search, cover/photo images.",
         "targetAbi": "10.9.0.0",
