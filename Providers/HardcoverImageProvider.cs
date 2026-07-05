@@ -1,9 +1,9 @@
-using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.Hardcover.Api;
+using MediaBrowser.Common.Net;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Model.Entities;
@@ -12,81 +12,47 @@ using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.Hardcover.Providers;
 
-/// <summary>
-/// Supplies cover art for books and profile photos for authors, sourced from whichever
-/// Hardcover record is already linked to the item via <see cref="HardcoverBookProvider"/>
-/// or <see cref="HardcoverPersonProvider"/>.
-/// </summary>
-public class HardcoverImageProvider : IRemoteImageProvider
+public class HardcoverBookImageProvider : IRemoteImageProvider
 {
-    private readonly HardcoverApiClient _api;
-    private readonly ILogger<HardcoverImageProvider> _logger;
+    private readonly IHardcoverApiService _api;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly ILogger<HardcoverBookImageProvider> _logger;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="HardcoverImageProvider"/> class.
-    /// </summary>
-    public HardcoverImageProvider(HardcoverApiClient api, IHttpClientFactory httpClientFactory, ILogger<HardcoverImageProvider> logger)
+    public HardcoverBookImageProvider(IHardcoverApiService api, IHttpClientFactory httpClientFactory, ILogger<HardcoverBookImageProvider> logger)
     {
         _api = api;
         _httpClientFactory = httpClientFactory;
         _logger = logger;
     }
 
-    /// <inheritdoc />
     public string Name => "Hardcover";
+    public bool Supports(BaseItem item) => item is Book;  // or Person if we add author images
 
-    /// <inheritdoc />
-    public bool Supports(BaseItem item) => item is Book || item is Person;
+    public IEnumerable<ImageType> GetSupportedImages(BaseItem item) => new[] { ImageType.Primary };
 
-    /// <inheritdoc />
-    public IEnumerable<ImageType> GetSupportedImages(BaseItem item)
-    {
-        yield return ImageType.Primary;
-    }
-
-    /// <inheritdoc />
     public async Task<IEnumerable<RemoteImageInfo>> GetImages(BaseItem item, CancellationToken cancellationToken)
     {
-        if (!HardcoverApiClient.HasApiToken)
-        {
-            return Array.Empty<RemoteImageInfo>();
-        }
+        var list = new List<RemoteImageInfo>();
+        var slug = item.ProviderIds.GetOrDefault("Hardcover");
+        if (string.IsNullOrEmpty(slug))
+            yield break;
 
-        var providerId = item.GetProviderId(HardcoverBookProvider.ProviderName);
-        if (string.IsNullOrEmpty(providerId) || !int.TryParse(providerId, out var id))
+        var covers = await _api.GetBookCoverUrlsAsync(slug, cancellationToken);
+        foreach (var url in covers)
         {
-            return Array.Empty<RemoteImageInfo>();
-        }
-
-        string? imageUrl = item switch
-        {
-            Book => (await _api.GetBookAsync(id, cancellationToken).ConfigureAwait(false))?.Image?.Url,
-            Person => (await _api.GetAuthorAsync(id, cancellationToken).ConfigureAwait(false))?.Image?.Url,
-            _ => null
-        };
-
-        if (string.IsNullOrEmpty(imageUrl))
-        {
-            return Array.Empty<RemoteImageInfo>();
-        }
-
-        return new[]
-        {
-            new RemoteImageInfo
+            list.Add(new RemoteImageInfo
             {
                 ProviderName = Name,
-                Type = ImageType.Primary,
-                Url = imageUrl
-            }
-        };
+                Url = url,
+                Type = ImageType.Primary
+            });
+        }
+        return list;
     }
 
-    /// <inheritdoc />
     public Task<HttpResponseMessage> GetImageResponse(string url, CancellationToken cancellationToken)
     {
-        // Hardcover's asset CDN serves cover art/photos without needing the API token.
-        var client = _httpClientFactory.CreateClient(HardcoverApiClient.HttpClientName);
-        return client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        var client = _httpClientFactory.CreateClient();
+        return client.GetAsync(url, cancellationToken);
     }
 }
