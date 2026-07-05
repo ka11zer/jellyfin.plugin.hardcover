@@ -19,27 +19,39 @@ public class HardcoverBookProvider : IRemoteMetadataProvider<Book, BookInfo>, IH
 
     public HardcoverBookProvider(ILoggerFactory loggerFactory)
     {
-        var client = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+        var client = new HttpClient 
+        { 
+            Timeout = TimeSpan.FromSeconds(30),
+            BaseAddress = new Uri("https://api.hardcover.app/v1/")
+        };
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("Jellyfin.Hardcover/1.0");
         _api = new HardcoverApiService(client, loggerFactory);
     }
 
     public string Name => "Hardcover";
-    public int Order => 1;
+    public int Order => 0; // Higher priority than ComicVine
 
     public async Task<IEnumerable<RemoteSearchResult>> GetSearchResults(BookInfo searchInfo, CancellationToken cancellationToken)
     {
         var results = new List<RemoteSearchResult>();
+        
+        if (string.IsNullOrWhiteSpace(searchInfo.Name))
+            return results;
+
         var books = await _api.SearchBooksAsync(searchInfo.Name, cancellationToken);
+        
         foreach (var book in books)
         {
             var result = new RemoteSearchResult
             {
                 Name = book.Title,
                 SearchProviderName = Name,
+                Overview = book.AuthorName != null ? $"By {book.AuthorName}" : null,
             };
             result.SetProviderId("Hardcover", book.Slug);
             results.Add(result);
         }
+        
         return results;
     }
 
