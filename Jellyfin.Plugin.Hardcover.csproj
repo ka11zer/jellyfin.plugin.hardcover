@@ -8,6 +8,7 @@
     <Description>Metadata plugin for books and authors from Hardcover.</Description>
     <PackageProjectUrl>https://github.com/ka11zer/jellyfin.plugin.hardcover</PackageProjectUrl>
     <EnableDynamicLoading>true</EnableDynamicLoading>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
