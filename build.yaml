@@ -1,0 +1,16 @@
+name: "Hardcover Metadata"
+guid: "a1b2c3d4-e5f6-7890-1234-567890abcdef"
+version: "1.0.0.0"
+targetAbi: "10.9.0.0"
+framework: "net8.0"
+overview: "Book and author metadata from Hardcover"
+description: >
+  Fetches book and author metadata -- title, overview, release date, rating, cover art,
+  author bio, and author photo -- from Hardcover (hardcover.app) for your Jellyfin book
+  library. Requires a free Hardcover Personal API Token.
+category: "Metadata"
+owner: "purvik"
+artifacts:
+  - "Jellyfin.Plugin.Hardcover.dll"
+changelog: >
+  - 1.0.0.0: Initial release. Book metadata + search, author metadata + search, cover/photo images.
