@@ -4,46 +4,48 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Jellyfin.Plugin.Hardcover.Configuration;
-using MediaBrowser.Common.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.Hardcover.Api;
+
+public interface IHardcoverApiService
+{
+    Task<List<AuthorSearchResult>> SearchAuthorsAsync(string name, CancellationToken cancellationToken);
+    Task<AuthorDetails?> GetAuthorByIdAsync(string slug, CancellationToken cancellationToken);
+    Task<List<BookSearchResult>> SearchBooksAsync(string title, CancellationToken cancellationToken);
+    Task<BookDetails?> GetBookByIdAsync(string slug, CancellationToken cancellationToken);
+    Task<List<string>> GetBookCoverUrlsAsync(string slug, CancellationToken cancellationToken);
+}
 
 public class HardcoverApiService : IHardcoverApiService
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<HardcoverApiService> _logger;
-    private readonly IConfigurationManager _configManager;
 
-    // Simple cache: key -> (expiration, data)
     private static readonly ConcurrentDictionary<string, (DateTime expiry, object? data)> Cache = new();
     private static readonly TimeSpan CacheDuration = TimeSpan.FromHours(1);
     private static readonly SemaphoreSlim RateLimiter = new(1, 1);
 
-    public HardcoverApiService(HttpClient httpClient, ILogger<HardcoverApiService> logger, IConfigurationManager configManager)
+    public HardcoverApiService(HttpClient httpClient, ILogger<HardcoverApiService> logger)
     {
         _httpClient = httpClient;
         _logger = logger;
-        _configManager = configManager;
     }
 
-    private PluginConfiguration GetConfig() =>
-        _configManager.GetPluginConfiguration<PluginConfiguration>(HardcoverPlugin.Instance!.Id);
+    private string GetApiKey()
+    {
+        var config = HardcoverPlugin.Instance?.Configuration;
+        return config?.ApiKey ?? throw new InvalidOperationException("Hardcover API key is not configured.");
+    }
 
     private async Task<T?> GetFromApiAsync<T>(string endpoint, CancellationToken cancellationToken)
     {
-        var config = GetConfig();
-        if (string.IsNullOrWhiteSpace(config.ApiKey))
-            throw new InvalidOperationException("Hardcover API key is not configured.");
-
+        var apiKey = GetApiKey();
         var request = new HttpRequestMessage(HttpMethod.Get, endpoint);
-        request.Headers.Add("Authorization", $"Bearer {config.ApiKey}");
+        request.Headers.Add("Authorization", $"Bearer {apiKey}");
 
-        // Respect rate limits (simple 1 request per second)
         await RateLimiter.WaitAsync(cancellationToken);
         try
         {
@@ -53,7 +55,6 @@ public class HardcoverApiService : IHardcoverApiService
         }
         finally
         {
-            // Release after a short delay to avoid hammering
             _ = Task.Delay(1000).ContinueWith(_ => RateLimiter.Release());
         }
     }
@@ -68,20 +69,18 @@ public class HardcoverApiService : IHardcoverApiService
         return result;
     }
 
-    public async Task<IReadOnlyList<AuthorSearchResult>> SearchAuthorsAsync(string name, CancellationToken cancellationToken)
+    public async Task<List<AuthorSearchResult>> SearchAuthorsAsync(string name, CancellationToken cancellationToken)
     {
         try
         {
             var results = await GetCachedOrFetchAsync($"author_search_{name}", async () =>
-            {
-                return await GetFromApiAsync<List<AuthorSearchResult>>($"authors/search?q={Uri.EscapeDataString(name)}", cancellationToken);
-            });
-            return results ?? Array.Empty<AuthorSearchResult>();
+                await GetFromApiAsync<List<AuthorSearchResult>>($"authors/search?q={Uri.EscapeDataString(name)}", cancellationToken));
+            return results ?? new List<AuthorSearchResult>();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error searching authors for {Name}", name);
-            return Array.Empty<AuthorSearchResult>();
+            return new List<AuthorSearchResult>();
         }
     }
 
@@ -90,9 +89,7 @@ public class HardcoverApiService : IHardcoverApiService
         try
         {
             return await GetCachedOrFetchAsync($"author_{slug}", async () =>
-            {
-                return await GetFromApiAsync<AuthorDetails>($"authors/{slug}", cancellationToken);
-            });
+                await GetFromApiAsync<AuthorDetails>($"authors/{slug}", cancellationToken));
         }
         catch (Exception ex)
         {
@@ -101,20 +98,18 @@ public class HardcoverApiService : IHardcoverApiService
         }
     }
 
-    public async Task<IReadOnlyList<BookSearchResult>> SearchBooksAsync(string title, CancellationToken cancellationToken)
+    public async Task<List<BookSearchResult>> SearchBooksAsync(string title, CancellationToken cancellationToken)
     {
         try
         {
             var results = await GetCachedOrFetchAsync($"book_search_{title}", async () =>
-            {
-                return await GetFromApiAsync<List<BookSearchResult>>($"books/search?q={Uri.EscapeDataString(title)}", cancellationToken);
-            });
-            return results ?? Array.Empty<BookSearchResult>();
+                await GetFromApiAsync<List<BookSearchResult>>($"books/search?q={Uri.EscapeDataString(title)}", cancellationToken));
+            return results ?? new List<BookSearchResult>();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error searching books for {Title}", title);
-            return Array.Empty<BookSearchResult>();
+            return new List<BookSearchResult>();
         }
     }
 
@@ -123,9 +118,7 @@ public class HardcoverApiService : IHardcoverApiService
         try
         {
             return await GetCachedOrFetchAsync($"book_{slug}", async () =>
-            {
-                return await GetFromApiAsync<BookDetails>($"books/{slug}", cancellationToken);
-            });
+                await GetFromApiAsync<BookDetails>($"books/{slug}", cancellationToken));
         }
         catch (Exception ex)
         {
@@ -134,12 +127,45 @@ public class HardcoverApiService : IHardcoverApiService
         }
     }
 
-    public async Task<IReadOnlyList<string>> GetBookCoverUrlsAsync(string slug, CancellationToken cancellationToken)
+    public async Task<List<string>> GetBookCoverUrlsAsync(string slug, CancellationToken cancellationToken)
     {
-        // Hardcover returns a single cover URL in the book details; we wrap it as a list.
         var details = await GetBookByIdAsync(slug, cancellationToken);
         if (details?.CoverImageUrl != null)
-            return new[] { details.CoverImageUrl };
-        return Array.Empty<string>();
+            return new List<string> { details.CoverImageUrl };
+        return new List<string>();
     }
+}
+
+// DTOs
+public class AuthorSearchResult
+{
+    public string Slug { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+}
+
+public class AuthorDetails
+{
+    public string Slug { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string? Biography { get; set; }
+    public string? ImageUrl { get; set; }
+    public List<string>? BookSlugs { get; set; }
+}
+
+public class BookSearchResult
+{
+    public string Slug { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
+    public string? AuthorName { get; set; }
+}
+
+public class BookDetails
+{
+    public string Slug { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public List<string> Authors { get; set; } = new();
+    public string? CoverImageUrl { get; set; }
+    public int? PublicationYear { get; set; }
+    public string? Publisher { get; set; }
 }
