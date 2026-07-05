@@ -10,6 +10,7 @@ using Jellyfin.Plugin.Hardcover.Api;
 using Jellyfin.Plugin.Hardcover.Api.Models;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Providers;
+using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Providers;
 using Microsoft.Extensions.Logging;
 
