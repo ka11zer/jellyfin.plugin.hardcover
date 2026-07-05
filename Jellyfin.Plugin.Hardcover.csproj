@@ -12,7 +12,8 @@
       IMPORTANT: These package versions must match your Jellyfin *server* version exactly,
       or the plugin will fail to load ("Error loading plugin" in the server log).
 
-      Check your server version with: jellyfin --version  (or Dashboard -> About)
+      Check your server version via Dashboard -> About in the web UI,
+      or by running the server binary with the version flag.
       Then set the versions below to match, e.g. server 10.9.11 -> packages 10.9.11.
     -->
     <JellyfinVersion>10.9.11</JellyfinVersion>
