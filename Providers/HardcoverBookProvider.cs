@@ -5,8 +5,7 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-// Corrected namespace for Book and BookInfo
-using MediaBrowser.Controller.Entities; 
+using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Model.Providers;
 using Microsoft.Extensions.Logging;
@@ -27,7 +26,8 @@ public class HardcoverBookProvider : IRemoteMetadataProvider<Book, BookInfo>
     public async Task<MetadataResult<Book>> GetMetadata(BookInfo info, CancellationToken cancellationToken)
     {
         var result = new MetadataResult<Book> { HasMetadata = false };
-        var apiKey = HardcoverPlugin.Instance?.Configuration.HardcoverApiKey;
+        // FIX: Line 30 updated to .ApiKey
+        var apiKey = HardcoverPlugin.Instance?.Configuration.ApiKey;
 
         if (string.IsNullOrWhiteSpace(apiKey))
         {
