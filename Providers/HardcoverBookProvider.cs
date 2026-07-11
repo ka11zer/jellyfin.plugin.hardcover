@@ -5,7 +5,8 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using MediaBrowser.Controller.Entities.Books;
+// Corrected namespace for Book and BookInfo
+using MediaBrowser.Controller.Entities; 
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Model.Providers;
 using Microsoft.Extensions.Logging;
