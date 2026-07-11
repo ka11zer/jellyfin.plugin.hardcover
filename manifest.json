@@ -9,6 +9,14 @@
     "imageUrl": "",
     "versions": [
       {
+        "version": "1.1.2",
+        "timestamp": "2026-07-11T12:18:28Z",
+        "changelog": "Release 1.1.2",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/ka11zer/jellyfin.plugin.hardcover/releases/download/v1.1.2/Jellyfin.Plugin.Hardcover.zip",
+        "checksum": "7ce243253e0b48775e6153f0ccc172b9"
+      },
+      {
         "version": "1.1.0",
         "date": "2026-07-11T09:53:27Z",
         "changelog": "Update 1.1.0",
