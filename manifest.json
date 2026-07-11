@@ -1,45 +1,12 @@
 [
   {
-    "guid": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
-    "name": "Hardcover Metadata",
-    "description": "Fetches book and author metadata -- title, overview, release date, rating, cover art, author bio, and author photo -- from Hardcover (hardcover.app) for your Jellyfin book library. Requires a free Hardcover Personal API Token.",
-    "overview": "Book and author metadata from Hardcover",
-    "owner": "purvik",
+    "guid": "d6b8f36c-94df-4fa3-94df-58076612df21",
+    "name": "Hardcover Book Metadata",
+    "description": "Fetches book metadata and covers from the Hardcover API.",
+    "overview": "A metadata provider for Jellyfin that queries Hardcover.app for accurate book and author info.",
+    "owner": "ka11zer",
     "category": "Metadata",
     "imageUrl": "",
-    "versions": [
-      {
-        "version": "2026.7.11.922",
-        "changelog": "- 1.0.0.0: Initial release. Book metadata + search, author metadata + search, cover/photo images.",
-        "targetAbi": "10.9.0.0",
-        "sourceUrl": "https://github.com/ka11zer/jellyfin.plugin.hardcover/releases/download/v2026.7.11.922/Jellyfin.Plugin.Hardcover.zip",
-        "checksum": "d5b7e0beca053de4566010b7e1b9246e",
-        "timestamp": "2026-07-11T09:22:51Z"
-      },
-      {
-        "version": "2026.7.5.915",
-        "changelog": "- 1.0.0.0: Initial release. Book metadata + search, author metadata + search, cover/photo images.",
-        "targetAbi": "10.9.0.0",
-        "sourceUrl": "https://github.com/ka11zer/jellyfin.plugin.hardcover/releases/download/v2026.7.5.915/Jellyfin.Plugin.Hardcover.zip",
-        "checksum": "c61ce989caaf762fdb0bb5cb1813bea1",
-        "timestamp": "2026-07-05T09:15:32Z"
-      },
-      {
-        "version": "2026.7.5.906",
-        "changelog": "- 1.0.0.0: Initial release. Book metadata + search, author metadata + search, cover/photo images.",
-        "targetAbi": "10.9.0.0",
-        "sourceUrl": "https://github.com/ka11zer/jellyfin.plugin.hardcover/releases/download/v2026.7.5.906/Jellyfin.Plugin.Hardcover.zip",
-        "checksum": "990f3b68457dde800662071984754c3a",
-        "timestamp": "2026-07-05T09:06:20Z"
-      },
-      {
-        "version": "1.0.0.0",
-        "changelog": "- 1.0.0.0: Initial release. Book metadata + search, author metadata + search, cover/photo images.",
-        "targetAbi": "10.9.0.0",
-        "sourceUrl": "https://github.com/ka11zer/jellyfin.plugin.hardcover/releases/download/v1.0.0.0/Jellyfin.Plugin.Hardcover.zip",
-        "checksum": "ea808a9d78b5e700eb25bedfd89da96f",
-        "timestamp": "2026-07-05T06:45:55Z"
-      }
-    ]
+    "versions": []
   }
 ]
