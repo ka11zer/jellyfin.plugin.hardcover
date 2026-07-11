@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AnalysisLevel>latest</AnalysisLevel>
@@ -9,8 +9,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Jellyfin.Controller" Version="10.9.7" Provider="Package" PrivateAssets="All" />
-    <PackageReference Include="Jellyfin.Model" Version="10.9.7" Provider="Package" PrivateAssets="All" />
+    <PackageReference Include="Jellyfin.Controller" Version="10.11.0" Provider="Package" PrivateAssets="All" />
+    <PackageReference Include="Jellyfin.Model" Version="10.11.0" Provider="Package" PrivateAssets="All" />
   </ItemGroup>
 
   <ItemGroup>
