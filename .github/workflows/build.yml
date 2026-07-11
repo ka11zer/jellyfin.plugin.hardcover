@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release version tag (e.g., v1.1.1)'
+        description: 'Release version tag (e.g., v1.1.2)'
         required: true
-        default: 'v1.1.1'
+        default: 'v1.1.2'
       target_abi:
-        description: 'Jellyfin Target ABI (Must match your server version, e.g., 10.9.0.0 or 10.11.0.0)'
+        description: 'Jellyfin Target ABI (Must be 10.11.0.0 for Jellyfin 10.11.x servers)'
         required: true
-        default: '10.9.0.0'
+        default: '10.11.0.0'
 
 jobs:
   build:
@@ -25,7 +25,8 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '8.0.x'
+        # Upgraded runner to .NET 9
+        dotnet-version: '9.0.x' 
 
     - name: Restore dependencies
       run: dotnet restore
@@ -44,15 +45,10 @@ jobs:
         CLEAN_VERSION=${RAW_VERSION#v}
         TARGET_ABI="${{ github.event.inputs.target_abi }}"
         
-        # Jellyfin requires exact ISO-8601 formatting for the timestamp
         TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-        
-        # Calculate the MD5 Checksum required by Jellyfin
         CHECKSUM=$(md5sum Jellyfin.Plugin.Hardcover.zip | awk '{ print $1 }')
-        
         ZIP_URL="https://github.com/${{ github.repository }}/releases/download/${RAW_VERSION}/Jellyfin.Plugin.Hardcover.zip"
 
-        # Use jq to inject the new version block WITH checksum and timestamp
         jq --arg v "$CLEAN_VERSION" \
            --arg t "$TIMESTAMP" \
            --arg u "$ZIP_URL" \
