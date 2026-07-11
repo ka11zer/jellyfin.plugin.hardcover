@@ -16,7 +16,8 @@ public class HardcoverPlugin : BasePlugin<PluginConfiguration>, IHasWebPages
         Instance = this;
     }
 
-    public override string Name => "Hardcover Book Metadata";
+    // Renamed to remove spaces, preventing Jellyfin UI routing errors
+    public override string Name => "Hardcover";
 
     public override Guid Id => Guid.Parse("d6b8f36c-94df-4fa3-94df-58076612df21");
 
@@ -28,9 +29,9 @@ public class HardcoverPlugin : BasePlugin<PluginConfiguration>, IHasWebPages
         {
             new PluginPageInfo
             {
-                // FIX: This forces the Web UI router to match the plugin name exactly
-                Name = this.Name, 
-                EmbeddedResourcePath = string.Format("{0}.Configuration.configPage.html", GetType().Namespace)
+                Name = this.Name,
+                // Hardcoded exact string matching the MSBuild manifest output
+                EmbeddedResourcePath = "Jellyfin.Plugin.Hardcover.Configuration.configPage.html"
             }
         };
     }
