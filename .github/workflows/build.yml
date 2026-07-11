@@ -1,123 +1,31 @@
-name: Build and Release Plugin
+name: Build and Release
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
-  workflow_dispatch: {}
-
-permissions:
-  contents: write
+    tags:
+      - 'v*' # Triggers when you push a tag like v1.0.0
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+    - name: Checkout Code
+      uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "9.0.x"
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
 
-      - name: Clear NuGet cache
-        run: dotnet nuget locals all --clear
+    - name: Restore dependencies
+      run: dotnet restore
 
-      - name: Restore
-        run: dotnet restore --no-cache
+    - name: Build and Publish
+      run: dotnet publish -c Release -o ./publish
 
-      - name: Build
-        run: dotnet build --configuration Release --no-restore
-
-      - name: Publish
-        run: dotnet publish --configuration Release --no-build --output publish
-
-      - name: Get version
-        id: version
-        run: |
-          VERSION=$(date +'%Y.%-m.%-d.%-H%M')
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Package zip
-        run: |
-          mkdir -p artifact
-          cd publish
-          zip -r ../artifact/Jellyfin.Plugin.Hardcover.zip Jellyfin.Plugin.Hardcover.dll
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Jellyfin.Plugin.Hardcover
-          path: artifact/Jellyfin.Plugin.Hardcover.zip
-
-      - name: Create GitHub release
-        id: release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ steps.version.outputs.version }}
-          name: Release v${{ steps.version.outputs.version }}
-          files: artifact/Jellyfin.Plugin.Hardcover.zip
-          generate_release_notes: true
-
-      - name: Update plugin manifest.json
-        run: |
-          pip install --quiet pyyaml
-          VERSION="${{ steps.version.outputs.version }}"
-          CHECKSUM=$(md5sum artifact/Jellyfin.Plugin.Hardcover.zip | cut -d " " -f 1)
-          SOURCE_URL="https://github.com/${{ github.repository }}/releases/download/v${VERSION}/Jellyfin.Plugin.Hardcover.zip"
-          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-
-          python3 - "$VERSION" "$CHECKSUM" "$SOURCE_URL" "$TIMESTAMP" <<'EOF'
-          import json, sys, yaml, os
-
-          version, checksum, source_url, timestamp = sys.argv[1:5]
-
-          with open("build.yaml") as f:
-              meta = yaml.safe_load(f)
-
-          manifest_path = "manifest.json"
-          if os.path.exists(manifest_path):
-              with open(manifest_path) as f:
-                  manifest = json.load(f)
-          else:
-              manifest = []
-
-          entry = next((p for p in manifest if p.get("guid") == meta["guid"]), None)
-          if entry is None:
-              entry = {
-                  "guid": meta["guid"],
-                  "name": meta["name"],
-                  "description": meta["description"].strip(),
-                  "overview": meta["overview"],
-                  "owner": meta["owner"],
-                  "category": meta["category"],
-                  "imageUrl": "",
-                  "versions": []
-              }
-              manifest.append(entry)
-
-          entry["versions"] = [v for v in entry["versions"] if v["version"] != version]
-          entry["versions"].insert(0, {
-              "version": version,
-              "changelog": meta.get("changelog", "").strip(),
-              "targetAbi": meta["targetAbi"],
-              "sourceUrl": source_url,
-              "checksum": checksum,
-              "timestamp": timestamp
-          })
-
-          with open(manifest_path, "w") as f:
-              json.dump(manifest, f, indent=2)
-              f.write("\n")
-          EOF
-
-      - name: Commit manifest.json
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add manifest.json
-          git diff --cached --quiet && echo "No manifest changes" || git commit -m "Update manifest.json for v${{ steps.version.outputs.version }}"
-          git push origin HEAD:main
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: ./publish/Jellyfin.Plugin.Hardcover.dll
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
