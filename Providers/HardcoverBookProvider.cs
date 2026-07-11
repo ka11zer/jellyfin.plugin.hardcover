@@ -26,7 +26,8 @@ public class HardcoverBookProvider : IRemoteMetadataProvider<Book, BookInfo>
     public async Task<MetadataResult<Book>> GetMetadata(BookInfo info, CancellationToken cancellationToken)
     {
         var result = new MetadataResult<Book> { HasMetadata = false };
-        // FIX: Line 30 updated to .ApiKey
+        
+        // This is the critical line that fixes your CS1061 error
         var apiKey = HardcoverPlugin.Instance?.Configuration.ApiKey;
 
         if (string.IsNullOrWhiteSpace(apiKey))
