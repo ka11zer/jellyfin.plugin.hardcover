@@ -1,43 +1,11 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <title>Hardcover Settings</title>
-</head>
-<body>
-    <div id="hardcoverConfigurationPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button">
-        <div data-role="content">
-            <div class="content-primary">
-                <form id="hardcoverConfigurationForm">
-                    <div class="inputContainer">
-                        <label class="inputLabel inputLabelUnfocused" for="ApiKey">Hardcover User Token (API Key):</label>
-                        <input id="ApiKey" name="ApiKey" type="password" is="emby-input" autocomplete="off" />
-                        <div class="fieldDescription">Provide your API Token generated via your Hardcover profile account settings.</div>
-                    </div>
-                    
-                    <div class="buttonContainer" style="display: flex; gap: 1em; margin-top: 2em;">
-                        <button is="emby-button" type="button" class="raised button-alt" id="testApiKeyButton" style="margin: 0;">
-                            <span>Test API Key</span>
-                        </button>
-                        <button is="emby-button" type="submit" class="raised button-submit block" style="margin: 0;">
-                            <span>Save Settings</span>
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-        
-        <script type="text/javascript">
-            var HardcoverConfig = {
-                pluginUniqueId: "d6b8f36c-94df-4fa3-94df-58076612df21"
-            };
-
+// ... existing HTML above ...
             document.getElementById('hardcoverConfigurationPage').addEventListener('pageshow', function () {
                 Dashboard.showLoadingMsg();
                 var page = this;
                 
                 ApiClient.getPluginConfiguration(HardcoverConfig.pluginUniqueId).then(function (config) {
-                    page.querySelector('#ApiKey').value = config.HardcoverApiKey || "";
+                    // FIX: Updated to config.ApiKey
+                    page.querySelector('#ApiKey').value = config.ApiKey || "";
                     Dashboard.hideLoadingMsg();
                 });
             });
@@ -48,37 +16,12 @@
                 var form = this;
                 
                 ApiClient.getPluginConfiguration(HardcoverConfig.pluginUniqueId).then(function (config) {
-                    config.HardcoverApiKey = form.querySelector('#ApiKey').value;
+                    // FIX: Updated to config.ApiKey
+                    config.ApiKey = form.querySelector('#ApiKey').value;
                     
                     ApiClient.updatePluginConfiguration(HardcoverConfig.pluginUniqueId, config).then(function (result) {
                         Dashboard.processPluginConfigurationUpdateResult(result);
                     });
                 });
             });
-
-            document.getElementById('testApiKeyButton').addEventListener('click', function (e) {
-                e.preventDefault();
-                var apiKey = document.querySelector('#ApiKey').value;
-                
-                if (!apiKey) {
-                    Dashboard.alert({ message: "Please input a token string prior to verifying configuration." });
-                    return;
-                }
-
-                Dashboard.showLoadingMsg();
-
-                ApiClient.fetch({
-                    type: 'POST',
-                    url: ApiClient.getUrl('Hardcover/TestApiKey?apiKey=' + encodeURIComponent(apiKey))
-                }).then(function () {
-                    Dashboard.hideLoadingMsg();
-                    Dashboard.alert({ message: "Success! Connection authorized with Hardcover API." });
-                }).catch(function () {
-                    Dashboard.hideLoadingMsg();
-                    Dashboard.alert({ message: "Authorization failed. Verify your token value and network access." });
-                });
-            });
-        </script>
-    </div>
-</body>
-</html>
+// ... test button javascript below ...
