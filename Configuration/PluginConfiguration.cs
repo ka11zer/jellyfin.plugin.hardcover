@@ -4,5 +4,5 @@ using MediaBrowser.Model.Plugins;
 
 public class PluginConfiguration : BasePluginConfiguration
 {
-    public string HardcoverApiKey { get; set; } = string.Empty;
+    public string ApiKey { get; set; } = string.Empty;
 }
