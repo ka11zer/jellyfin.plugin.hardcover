@@ -4,9 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release version tag (e.g., v1.0.0)'
+        description: 'Release version tag (e.g., v1.1.1)'
         required: true
-        default: 'v1.0.0'
+        default: 'v1.1.1'
+      target_abi:
+        description: 'Jellyfin Target ABI (Must match your server version, e.g., 10.9.0.0 or 10.11.0.0)'
+        required: true
+        default: '10.9.0.0'
 
 jobs:
   build:
@@ -36,17 +40,25 @@ jobs:
 
     - name: Update manifest.json
       run: |
-        # Capture the input version and strip the 'v' for the manifest
         RAW_VERSION="${{ github.event.inputs.version }}"
         CLEAN_VERSION=${RAW_VERSION#v}
-        DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+        TARGET_ABI="${{ github.event.inputs.target_abi }}"
+        
+        # Jellyfin requires exact ISO-8601 formatting for the timestamp
+        TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+        
+        # Calculate the MD5 Checksum required by Jellyfin
+        CHECKSUM=$(md5sum Jellyfin.Plugin.Hardcover.zip | awk '{ print $1 }')
+        
         ZIP_URL="https://github.com/${{ github.repository }}/releases/download/${RAW_VERSION}/Jellyfin.Plugin.Hardcover.zip"
 
-        # Use jq to prepend the new version block to the versions array
+        # Use jq to inject the new version block WITH checksum and timestamp
         jq --arg v "$CLEAN_VERSION" \
-           --arg d "$DATE" \
+           --arg t "$TIMESTAMP" \
            --arg u "$ZIP_URL" \
-           '.[0].versions = [{"version": $v, "date": $d, "changelog": "Update \($v)", "targetAbi": "10.9.0.0", "sourceUrl": $u}] + .[0].versions' \
+           --arg c "$CHECKSUM" \
+           --arg abi "$TARGET_ABI" \
+           '.[0].versions = [{"version": $v, "timestamp": $t, "changelog": "Release \($v)", "targetAbi": $abi, "sourceUrl": $u, "checksum": $c}] + .[0].versions' \
            manifest.json > tmp.json && mv tmp.json manifest.json
 
     - name: Commit and Push Updated Manifest
